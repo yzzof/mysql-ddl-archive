@@ -6,6 +6,7 @@
   "includeSystem": false,
   "keepAutoIncrement": false,
   "noTimestamp": false,
+  "noHostFolder": false,
   "objectTypes": [
     "database",
     "tables",

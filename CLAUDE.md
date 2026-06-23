@@ -1,0 +1,59 @@
+# CLAUDE.md
+
+Guidance for working in this repository.
+
+## What this is
+
+`mysql-ddl-archive` is a TypeScript CLI that connects to a MySQL server and
+archives the canonical DDL of **every** schema object type (databases, tables,
+views, procedures, functions, triggers, events) by running `SHOW CREATE ...`.
+Output is one `.sql` file per object, one directory per database. See
+[README.md](README.md) for full usage.
+
+## Layout
+
+- [src/cli.ts](src/cli.ts) — `util.parseArgs` flags, `config.json` loader, option
+  precedence (**CLI flag > config.json > env var > default**), validation, `--help`.
+- [src/mysql.ts](src/mysql.ts) — `mysql2/promise` connection; `information_schema`
+  enumeration + `showCreate(type, db, name)`.
+- [src/filters.ts](src/filters.ts) — database/table include-exclude, object-type gating.
+- [src/normalize.ts](src/normalize.ts) — strips volatile `AUTO_INCREMENT=N`.
+- [src/snapshot.ts](src/snapshot.ts) — orchestration: path layout, file writing,
+  `DELIMITER` wrapping, `manifest.json`, and `--no-timestamp` prune logic.
+- [src/prompt.ts](src/prompt.ts) — hidden (non-echoing) password prompt.
+- [src/index.ts](src/index.ts) — entry point + summary output.
+
+## Output path logic (snapshot.ts)
+
+`<output>[/<host_port>][/<timestamp>|/current]/<db>/<type>/<object>.sql`
+- `--no-host-folder` (`useHostFolder=false`) drops the `<host_port>` segment.
+- `--no-timestamp` (`useTimestamp=false`) writes to `current/` and prunes to mirror
+  the server; when combined with `--no-host-folder`, db folders go directly in `<output>`.
+- Pruning is scoped: object files only within processed databases/enabled types; whole
+  database folders only on full-server runs (no `--database`/`--table`) for DBs gone
+  from the server. Never touches `manifest.json` or sibling folders of a scoped run.
+
+## Build & verify
+
+```sh
+npm install
+npm run build        # tsc -> dist/ (bin = dist/index.js)
+npm run typecheck    # tsc --noEmit
+```
+
+There is no live MySQL in dev here, so behavior is verified with a fake-client
+harness that duck-types `MysqlClient` and calls `takeSnapshot`/`parseCli`
+directly (covers layout, sync pruning, filters, and config precedence). When
+changing path or prune logic, extend that harness rather than relying on a real
+server. Keep `tsc --noEmit` clean (strict mode, `noUncheckedIndexedAccess`,
+`verbatimModuleSyntax`; relative imports use `.js` extensions).
+
+## Conventions / gotchas
+
+- Add a new option in **four** places: `options` (parseArgs), `FileConfig` +
+  `KNOWN_FILE_KEYS`, the resolution block in `parseCli`, and `Config`. Mirror the
+  `noTimestamp`/`noHostFolder` boolean pattern (file key `noX`, internal `useX`).
+- `config.json` holds real credentials and is **gitignored**; commit changes to
+  `config.example.json` instead. Never put a password in a committed config.
+- Rely on the server's own `SHOW CREATE` output for "all options" — do not
+  hand-build DDL.

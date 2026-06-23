@@ -71,7 +71,15 @@ node dist/index.js --no-timestamp
 
 Snapshots are grouped per server in a `<host>_<port>` folder, then either a
 timestamped directory (default) or a stable `current/` directory
-(`--no-timestamp`):
+(`--no-timestamp`). The per-host folder can be removed with `--no-host-folder`:
+
+```
+default            <output>/<host_port>/<UTC-timestamp>/<db>/...
+--no-timestamp     <output>/<host_port>/current/<db>/...
+--no-host-folder   <output>/<UTC-timestamp>/<db>/...
+both               <output>/<db>/...        (database folders directly in output)
+```
+
 
 ```
 snapshots/
@@ -122,7 +130,8 @@ touching sibling folders. The list of removed paths is recorded in
 | `--include-system` | | off | Include `information_schema`/`mysql`/`sys`/`performance_schema` |
 | `--object-types` | | all | CSV subset of `database,tables,views,procedures,functions,triggers,events` |
 | `-o, --output` | | `./snapshots` | Base output directory |
-| `--no-timestamp` | | off | Write to `<host_port>/current/` and prune to match the server (see above) |
+| `--no-timestamp` | | off | Write to `current/` and prune to match the server (see above) |
+| `--no-host-folder` | | off | Omit the `<host_port>` folder level (see layout above) |
 | `--keep-auto-increment` | | off | Keep `AUTO_INCREMENT=N` in table DDL |
 | `-c, --config` | | `./config.json` | Path to a JSON config file |
 | `--help` | | | Show help |

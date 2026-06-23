@@ -43,8 +43,10 @@ export interface Config {
   objectTypes: ObjectTypeOption[];
   output: string;
   keepAutoIncrement: boolean;
-  /** false => write to <host>/current/ and prune; true => timestamped dirs. */
+  /** false => write to current/ and prune; true => timestamped dirs. */
   useTimestamp: boolean;
+  /** false => omit the <host_port> folder; database dirs sit higher up. */
+  useHostFolder: boolean;
 }
 
 export type CliResult =
@@ -75,16 +77,19 @@ Selection / filtering:
 
 Output / behavior:
   -o, --output <dir>       Base output directory (default ./snapshots)
-      --no-timestamp       Write to <output>/<host_port>/current/ instead of a new
-                           timestamped dir; overwrite existing files and delete files
-                           for objects (and, on a full-server run, databases) that no
-                           longer exist, mirroring the server's current state.
+      --no-timestamp       Write to current/ instead of a new timestamped dir;
+                           overwrite existing files and delete files for objects
+                           (and, on a full-server run, databases) that no longer
+                           exist, mirroring the server's current state.
+      --no-host-folder     Omit the <host_port> folder level (see layout below)
       --keep-auto-increment  Do not strip AUTO_INCREMENT=N from table DDL
   -c, --config <path>      Path to a JSON config file (default ./config.json)
       --help               Show this help
 
 Output layout: <output>/<host_port>/<UTC-timestamp>/<db>/<type>/<object>.sql
-(or <output>/<host_port>/current/... with --no-timestamp).`;
+  --no-timestamp:    <output>/<host_port>/current/<db>/...
+  --no-host-folder:  <output>/<UTC-timestamp>/<db>/...
+  both:              <output>/<db>/...   (database folders directly in output)`;
 
 const options = {
   host: { type: 'string', short: 'h' },
@@ -100,6 +105,7 @@ const options = {
   'object-types': { type: 'string' },
   output: { type: 'string', short: 'o' },
   'no-timestamp': { type: 'boolean' },
+  'no-host-folder': { type: 'boolean' },
   'keep-auto-increment': { type: 'boolean' },
   config: { type: 'string', short: 'c' },
   help: { type: 'boolean', default: false },
@@ -116,6 +122,7 @@ export interface FileConfig {
   includeSystem?: boolean;
   keepAutoIncrement?: boolean;
   noTimestamp?: boolean;
+  noHostFolder?: boolean;
   objectTypes?: string[];
   database?: string[];
   databases?: string[];
@@ -127,8 +134,8 @@ export interface FileConfig {
 
 const KNOWN_FILE_KEYS = new Set<string>([
   'host', 'port', 'user', 'password', 'socket', 'output', 'includeSystem',
-  'keepAutoIncrement', 'noTimestamp', 'objectTypes', 'database', 'databases',
-  'table', 'tables', 'excludeDatabases', 'excludeTables',
+  'keepAutoIncrement', 'noTimestamp', 'noHostFolder', 'objectTypes', 'database',
+  'databases', 'table', 'tables', 'excludeDatabases', 'excludeTables',
 ]);
 
 /**
@@ -243,6 +250,9 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
   const noTimestamp =
     (values['no-timestamp'] as boolean | undefined) ??
     file.noTimestamp ?? false;
+  const noHostFolder =
+    (values['no-host-folder'] as boolean | undefined) ??
+    file.noHostFolder ?? false;
 
   return {
     help: false,
@@ -271,5 +281,6 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
     output: (values.output as string | undefined) ?? file.output ?? './snapshots',
     keepAutoIncrement,
     useTimestamp: !noTimestamp,
+    useHostFolder: !noHostFolder,
   };
 }

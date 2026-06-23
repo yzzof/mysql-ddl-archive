@@ -125,14 +125,21 @@ export async function takeSnapshot(
   const generatedAt = new Date().toISOString();
   const serverVersion = await client.serverVersion();
 
-  // <output>/<host_port>/(<timestamp> | current)
+  // Layout: <output>[/<host_port>][/<timestamp>|/current]
+  // - host folder omitted when !useHostFolder
+  // - in no-timestamp mode the "current" segment is dropped when there is also
+  //   no host folder, so database dirs sit directly in <output>.
   const hostLabel = safeFileName(
     `${config.connection.host}_${config.connection.port}`,
   );
-  const hostDir = path.resolve(config.output, hostLabel);
+  const baseDir = config.useHostFolder
+    ? path.resolve(config.output, hostLabel)
+    : path.resolve(config.output);
   const snapshotDir = config.useTimestamp
-    ? path.join(hostDir, snapshotStamp())
-    : path.join(hostDir, 'current');
+    ? path.join(baseDir, snapshotStamp())
+    : config.useHostFolder
+      ? path.join(baseDir, 'current')
+      : baseDir;
 
   const typeEnabled = makeTypeFilter(config);
 
