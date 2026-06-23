@@ -132,6 +132,7 @@ touching sibling folders. The list of removed paths is recorded in
 | `-o, --output` | | `./snapshots` | Base output directory |
 | `--no-timestamp` | | off | Write to `current/` and prune to match the server (see above) |
 | `--no-host-folder` | | off | Omit the `<host_port>` folder level (see layout above) |
+| `--auto-commit` | | off | If the output dir is a git repo, commit + push the snapshot |
 | `--keep-auto-increment` | | off | Keep `AUTO_INCREMENT=N` in table DDL |
 | `-c, --config` | | `./config.json` | Path to a JSON config file |
 | `--help` | | | Show help |
@@ -174,3 +175,22 @@ diff -ru snapshots/127.0.0.1_3306/2026-06-22T*/mydb \
 ```
 Use `--no-timestamp` if you prefer a single, always-current mirror that you let
 git track over time instead.
+
+### Auto-commit
+
+With `--auto-commit` (or `"autoCommit": true`), after a successful snapshot the
+tool checks whether the output directory is inside a git repository and, if so:
+
+1. stages the snapshot changes under the output path (`git add -A -- <output>`),
+2. commits them with an auto-generated message (host, mode, object counts), and
+3. pushes — best effort — when the branch has an upstream or a remote exists.
+
+Pairs naturally with `--no-timestamp`: each run updates the tree in place and
+records the structural diff as a commit. If the output directory is **not** a
+git repo, git is missing, or there's nothing to commit, the step is skipped with
+a notice — it never fails the run. A failed push is a warning; the snapshot
+files (and the local commit) are already saved.
+
+```sh
+node dist/index.js --no-timestamp --auto-commit -o /srv/ddl-archive
+```

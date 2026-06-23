@@ -21,7 +21,10 @@ Output is one `.sql` file per object, one directory per database. See
 - [src/snapshot.ts](src/snapshot.ts) — orchestration: path layout, file writing,
   `DELIMITER` wrapping, `manifest.json`, and `--no-timestamp` prune logic.
 - [src/prompt.ts](src/prompt.ts) — hidden (non-echoing) password prompt.
-- [src/index.ts](src/index.ts) — entry point + summary output.
+- [src/git.ts](src/git.ts) — `--auto-commit` helpers: detect repo, stage/commit the
+  snapshot, best-effort push. Wraps `git` via `child_process.execFile` (no shell, no dep);
+  never throws — returns a result the caller logs.
+- [src/index.ts](src/index.ts) — entry point + summary output; runs auto-commit post-snapshot.
 
 ## Output path logic (snapshot.ts)
 
@@ -32,6 +35,11 @@ Output is one `.sql` file per object, one directory per database. See
 - Pruning is scoped: object files only within processed databases/enabled types; whole
   database folders only on full-server runs (no `--database`/`--table`) for DBs gone
   from the server. Never touches `manifest.json` or sibling folders of a scoped run.
+- **Prune safety invariant:** database-level prune only deletes a folder that is
+  recognizably ours (contains `database.sql` or a type subdir — see `looksLikeSnapshotDb`)
+  and skips dotfolders. This is critical because the output dir can be a git repo, so
+  `.git` and any unrelated content must never be removed (with `--no-timestamp
+  --no-host-folder` the snapshot dir *is* the output dir).
 
 ## Build & verify
 

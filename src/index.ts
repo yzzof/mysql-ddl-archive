@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+import path from 'node:path';
+
+import type { Config } from './cli.js';
 import { parseCli } from './cli.js';
+import { autoCommitSnapshot, isGitRepo } from './git.js';
 import { MysqlClient } from './mysql.js';
 import { promptHidden } from './prompt.js';
-import { takeSnapshot } from './snapshot.js';
+import { takeSnapshot, type Manifest } from './snapshot.js';
 
 async function main(): Promise<number> {
   let config;
@@ -48,6 +52,11 @@ async function main(): Promise<number> {
     if (manifest.pruned.length > 0) {
       console.log(`  pruned ${manifest.pruned.length} stale file(s)/folder(s)`);
     }
+
+    if (config.autoCommit) {
+      await runAutoCommit(config, manifest);
+    }
+
     if (manifest.errorCount > 0) {
       console.error(`  ${manifest.errorCount} object(s) failed — see manifest.json`);
       return 1;
@@ -59,6 +68,33 @@ async function main(): Promise<number> {
   } finally {
     await client.end();
   }
+}
+
+/** Commit (and best-effort push) the snapshot when output is in a git repo. */
+async function runAutoCommit(config: Config, manifest: Manifest): Promise<void> {
+  const outputAbs = path.resolve(config.output);
+  const root = await isGitRepo(outputAbs);
+  if (!root) {
+    console.log(`  auto-commit: ${outputAbs} is not a git repo — skipped`);
+    return;
+  }
+
+  const c = manifest.counts;
+  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  const message =
+    `mysql-ddl-archive: ${manifest.host} (${manifest.mode}) — ` +
+    `databases=${c.database} tables=${c.table} views=${c.view} ` +
+    `procedures=${c.procedure} functions=${c.function} ` +
+    `triggers=${c.trigger} events=${c.event} (total ${total})\n\n` +
+    `committed: ${new Date().toISOString()}`;
+
+  const result = await autoCommitSnapshot({ root, addPath: outputAbs, message });
+  if (result.committed) {
+    const sha = result.sha ? ` (${result.sha})` : '';
+    console.log(`  auto-commit: committed${sha}` + (result.pushed ? ' and pushed' : ''));
+  }
+  if (result.note) console.log(`  auto-commit: ${result.note}`);
+  if (result.warning) console.warn(`  ! auto-commit: ${result.warning}`);
 }
 
 main().then(

@@ -47,6 +47,8 @@ export interface Config {
   useTimestamp: boolean;
   /** false => omit the <host_port> folder; database dirs sit higher up. */
   useHostFolder: boolean;
+  /** When the output dir is a git repo, commit (and best-effort push) after a run. */
+  autoCommit: boolean;
 }
 
 export type CliResult =
@@ -82,6 +84,8 @@ Output / behavior:
                            (and, on a full-server run, databases) that no longer
                            exist, mirroring the server's current state.
       --no-host-folder     Omit the <host_port> folder level (see layout below)
+      --auto-commit        If the output dir is a git repo, git add+commit the snapshot
+                           and push it (best-effort; skipped if no remote)
       --keep-auto-increment  Do not strip AUTO_INCREMENT=N from table DDL
   -c, --config <path>      Path to a JSON config file (default ./config.json)
       --help               Show this help
@@ -106,6 +110,7 @@ const options = {
   output: { type: 'string', short: 'o' },
   'no-timestamp': { type: 'boolean' },
   'no-host-folder': { type: 'boolean' },
+  'auto-commit': { type: 'boolean' },
   'keep-auto-increment': { type: 'boolean' },
   config: { type: 'string', short: 'c' },
   help: { type: 'boolean', default: false },
@@ -123,6 +128,7 @@ export interface FileConfig {
   keepAutoIncrement?: boolean;
   noTimestamp?: boolean;
   noHostFolder?: boolean;
+  autoCommit?: boolean;
   objectTypes?: string[];
   database?: string[];
   databases?: string[];
@@ -134,8 +140,8 @@ export interface FileConfig {
 
 const KNOWN_FILE_KEYS = new Set<string>([
   'host', 'port', 'user', 'password', 'socket', 'output', 'includeSystem',
-  'keepAutoIncrement', 'noTimestamp', 'noHostFolder', 'objectTypes', 'database',
-  'databases', 'table', 'tables', 'excludeDatabases', 'excludeTables',
+  'keepAutoIncrement', 'noTimestamp', 'noHostFolder', 'autoCommit', 'objectTypes',
+  'database', 'databases', 'table', 'tables', 'excludeDatabases', 'excludeTables',
 ]);
 
 /**
@@ -253,6 +259,9 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
   const noHostFolder =
     (values['no-host-folder'] as boolean | undefined) ??
     file.noHostFolder ?? false;
+  const autoCommit =
+    (values['auto-commit'] as boolean | undefined) ??
+    file.autoCommit ?? false;
 
   return {
     help: false,
@@ -282,5 +291,6 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
     keepAutoIncrement,
     useTimestamp: !noTimestamp,
     useHostFolder: !noHostFolder,
+    autoCommit,
   };
 }

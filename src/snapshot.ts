@@ -37,7 +37,6 @@ export interface SnapshotError {
 }
 
 export interface Manifest {
-  generatedAt: string;
   serverVersion: string;
   host: string;
   mode: 'timestamp' | 'current';
@@ -82,17 +81,19 @@ interface RenderArgs {
   name: string;
   ddl: string;
   serverVersion: string;
-  generatedAt: string;
 }
 
-/** Render the final .sql file contents for one object. */
+/**
+ * Render the final .sql file contents for one object. The header is kept free
+ * of volatile values (no per-run timestamp) so that unchanged DDL produces a
+ * byte-identical file run-to-run — i.e. nothing to commit when nothing changed.
+ */
 export function renderFile(args: RenderArgs): string {
-  const { type, db, name, ddl, serverVersion, generatedAt } = args;
+  const { type, db, name, ddl, serverVersion } = args;
   const label = type === 'database' ? db : `${db}.${name}`;
   const header =
     `-- ${type.toUpperCase()}: ${label}\n` +
     `-- server: MySQL ${serverVersion}\n` +
-    `-- generated: ${generatedAt}\n` +
     `-- source: mysql-ddl-archive\n\n`;
 
   const body = STORED_PROGRAMS.has(type)
@@ -122,7 +123,6 @@ export async function takeSnapshot(
   client: MysqlClient,
   config: Config,
 ): Promise<Manifest> {
-  const generatedAt = new Date().toISOString();
   const serverVersion = await client.serverVersion();
 
   // Layout: <output>[/<host_port>][/<timestamp>|/current]
@@ -172,7 +172,7 @@ export async function takeSnapshot(
       await writeObject({
         client, config, db, name: db, type: 'database',
         outPath: path.join(dbDir, 'database.sql'),
-        serverVersion, generatedAt, counts, errors, written,
+        serverVersion, counts, errors, written,
       });
     }
 
@@ -189,7 +189,7 @@ export async function takeSnapshot(
         await writeObject({
           client, config, db, name, type,
           outPath: path.join(targetDir, `${safeFileName(name)}.sql`),
-          serverVersion, generatedAt, counts, errors, written,
+          serverVersion, counts, errors, written,
         });
       }
     }
@@ -206,7 +206,6 @@ export async function takeSnapshot(
   }
 
   const manifest: Manifest = {
-    generatedAt,
     serverVersion,
     host: hostLabel,
     mode: config.useTimestamp ? 'timestamp' : 'current',
@@ -280,7 +279,6 @@ interface WriteObjectArgs {
   type: ObjectType;
   outPath: string;
   serverVersion: string;
-  generatedAt: string;
   counts: Counts;
   errors: SnapshotError[];
   written: Set<string>;
@@ -289,13 +287,13 @@ interface WriteObjectArgs {
 /** Fetch, normalize, render and write a single object; record errors. */
 async function writeObject(args: WriteObjectArgs): Promise<void> {
   const {
-    client, config, db, name, type, outPath, serverVersion, generatedAt,
+    client, config, db, name, type, outPath, serverVersion,
     counts, errors, written,
   } = args;
   try {
     const raw = await client.showCreate(type, db, name);
     const ddl = normalizeDdl(type, raw, config);
-    const contents = renderFile({ type, db, name, ddl, serverVersion, generatedAt });
+    const contents = renderFile({ type, db, name, ddl, serverVersion });
     await writeFile(outPath, contents);
     written.add(outPath);
     counts[type] += 1;
@@ -360,20 +358,40 @@ async function pruneToCurrent(args: PruneArgs): Promise<string[]> {
 
   // Database-level prune: only on a full-server run, only for databases gone
   // from the server (excluded/system folders still exist on the server, so
-  // they survive this check).
+  // they survive this check). Crucially, we only ever remove folders that we
+  // recognize as our own snapshot database folders — never `.git`, dotfolders,
+  // or any unrelated content that may live alongside the output (the output
+  // dir can be a git repo, which must not be touched).
   const fullScope = config.databases.length === 0 && config.tables.length === 0;
   if (fullScope) {
     const serverSet = new Set(allDatabases);
     for (const ent of await safeReaddir(snapshotDir)) {
       if (!ent.isDirectory()) continue;
+      if (ent.name.startsWith('.')) continue; // protect .git and other dotfolders
       if (serverSet.has(decodeFolder(ent.name))) continue;
       const full = path.join(snapshotDir, ent.name);
+      if (!(await looksLikeSnapshotDb(full))) continue; // not ours — leave it alone
       await rm(full, { recursive: true, force: true });
       pruned.push(full);
     }
   }
 
   return pruned;
+}
+
+// Marker entries that identify a directory as one of our snapshot database
+// folders (created by writeObject): the database file or any type subdir.
+const SNAPSHOT_MARKERS = new Set<string>([
+  'database.sql',
+  ...Object.values(COLLECTIONS).map((c) => c.dir),
+]);
+
+/** True if `dir` contains snapshot markers, i.e. we created it as a db folder. */
+async function looksLikeSnapshotDb(dir: string): Promise<boolean> {
+  for (const ent of await safeReaddir(dir)) {
+    if (SNAPSHOT_MARKERS.has(ent.name)) return true;
+  }
+  return false;
 }
 
 /** readdir that returns [] when the directory doesn't exist. */
