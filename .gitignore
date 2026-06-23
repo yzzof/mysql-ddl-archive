@@ -1,3 +1,8 @@
+snapshots/
+dist/
+config.json
+.vscode 
+
 # Logs
 logs
 *.log

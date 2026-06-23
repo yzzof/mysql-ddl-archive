@@ -1,0 +1,20 @@
+{
+  "host": "127.0.0.1",
+  "port": 3306,
+  "user": "root",
+  "output": "./snapshots",
+  "includeSystem": false,
+  "keepAutoIncrement": false,
+  "noTimestamp": false,
+  "objectTypes": [
+    "database",
+    "tables",
+    "views",
+    "procedures",
+    "functions",
+    "triggers",
+    "events"
+  ],
+  "excludeDatabases": [],
+  "excludeTables": []
+}
