@@ -94,7 +94,7 @@ export function renderFile(args: RenderArgs): string {
   const header =
     `-- ${type.toUpperCase()}: ${label}\n` +
     `-- server: MySQL ${serverVersion}\n` +
-    `-- source: mysql-ddl-archive\n\n`;
+    `-- source: mysql-ddl-export\n\n`;
 
   const body = STORED_PROGRAMS.has(type)
     ? `DELIMITER $$\n${ddl}$$\nDELIMITER ;\n`

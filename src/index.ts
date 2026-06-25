@@ -82,7 +82,7 @@ async function runAutoCommit(config: Config, manifest: Manifest): Promise<void> 
   const c = manifest.counts;
   const total = Object.values(c).reduce((a, b) => a + b, 0);
   const message =
-    `mysql-ddl-archive: ${manifest.host} (${manifest.mode}) — ` +
+    `mysql-ddl-export: ${manifest.host} (${manifest.mode}) — ` +
     `databases=${c.database} tables=${c.table} views=${c.view} ` +
     `procedures=${c.procedure} functions=${c.function} ` +
     `triggers=${c.trigger} events=${c.event} (total ${total})\n\n` +

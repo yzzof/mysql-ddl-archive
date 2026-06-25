@@ -4,7 +4,7 @@ Guidance for working in this repository.
 
 ## What this is
 
-`mysql-ddl-archive` is a TypeScript CLI that connects to a MySQL server and
+`mysql-ddl-export` is a TypeScript CLI that connects to a MySQL server and
 archives the canonical DDL of **every** schema object type (databases, tables,
 views, procedures, functions, triggers, events) by running `SHOW CREATE ...`.
 Output is one `.sql` file per object, one directory per database. See

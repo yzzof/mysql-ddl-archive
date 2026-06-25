@@ -1,10 +1,10 @@
 {
-  "name": "mysql-ddl-archive",
+  "name": "mysql-ddl-export",
   "version": "1.0.0",
   "description": "Takes a snapshot of a MySQL server's DDL structure, maintaining a history.",
   "type": "module",
   "bin": {
-    "mysql-ddl-archive": "dist/index.js"
+    "mysql-ddl-export": "dist/index.js"
   },
   "main": "dist/index.js",
   "files": [

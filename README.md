@@ -1,4 +1,4 @@
-# mysql-ddl-archive
+# mysql-ddl-export
 
 Takes a snapshot of a MySQL server's structure (DDL), maintaining a history.
 
