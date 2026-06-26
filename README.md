@@ -10,7 +10,8 @@ server's own DDL, every option (engines, charsets/collations, row formats,
 partitioning, foreign keys, CHECK constraints, generated columns,
 sql_mode, view algorithms, event schedules, …) is captured automatically.
 By default the environment-specific `DEFINER=user@host` tag is stripped from
-view/routine/trigger/event DDL (see `--keep-definer`).
+view/routine/trigger/event DDL (see `--keep-definer`). Table and database
+charset/collation are also stripped by default (see `--keep-charset`).
 
 ## Object types captured
 
@@ -64,6 +65,9 @@ node dist/index.js -d mydb --keep-auto-increment
 
 # Keep the DEFINER=user@host tag on views/routines/triggers/events (stripped by default)
 node dist/index.js -d mydb --keep-definer
+
+# Keep DEFAULT CHARSET/COLLATE in table and CREATE DATABASE DDL (stripped by default)
+node dist/index.js -d mydb --keep-charset
 
 # Custom output location
 node dist/index.js -o /backups/ddl
@@ -140,6 +144,7 @@ touching sibling folders. The list of removed paths is recorded in
 | `--auto-commit` | | off | If the output dir is a git repo, commit + push the snapshot |
 | `--keep-auto-increment` | | off | Keep `AUTO_INCREMENT=N` in table DDL |
 | `--keep-definer` | | off | Keep `DEFINER=user@host` on views/routines/triggers/events |
+| `--keep-charset` | | off | Keep `DEFAULT CHARSET`/`COLLATE` in table and `CREATE DATABASE` DDL |
 | `-c, --config` | | `./config.json` | Path to a JSON config file |
 | `--help` | | | Show help |
 

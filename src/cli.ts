@@ -45,6 +45,8 @@ export interface Config {
   keepAutoIncrement: boolean;
   /** false => strip DEFINER=user@host from view/routine/trigger/event DDL. */
   keepDefiner: boolean;
+  /** false => strip DEFAULT CHARSET/COLLATE from table-options and CREATE DATABASE DDL. */
+  keepCharset: boolean;
   /** false => write to current/ and prune; true => timestamped dirs. */
   useTimestamp: boolean;
   /** false => omit the <host_port> folder; database dirs sit higher up. */
@@ -90,6 +92,7 @@ Output / behavior:
                            and push it (best-effort; skipped if no remote)
       --keep-auto-increment  Do not strip AUTO_INCREMENT=N from table DDL
       --keep-definer       Do not strip DEFINER=user@host from view/routine/trigger/event DDL
+      --keep-charset       Do not strip DEFAULT CHARSET/COLLATE from table and CREATE DATABASE DDL
   -c, --config <path>      Path to a JSON config file (default ./config.json)
       --help               Show this help
 
@@ -116,6 +119,7 @@ const options = {
   'auto-commit': { type: 'boolean' },
   'keep-auto-increment': { type: 'boolean' },
   'keep-definer': { type: 'boolean' },
+  'keep-charset': { type: 'boolean' },
   config: { type: 'string', short: 'c' },
   help: { type: 'boolean', default: false },
 } as const;
@@ -131,6 +135,7 @@ export interface FileConfig {
   includeSystem?: boolean;
   keepAutoIncrement?: boolean;
   keepDefiner?: boolean;
+  keepCharset?: boolean;
   noTimestamp?: boolean;
   noHostFolder?: boolean;
   autoCommit?: boolean;
@@ -145,7 +150,7 @@ export interface FileConfig {
 
 const KNOWN_FILE_KEYS = new Set<string>([
   'host', 'port', 'user', 'password', 'socket', 'output', 'includeSystem',
-  'keepAutoIncrement', 'keepDefiner', 'noTimestamp', 'noHostFolder', 'autoCommit', 'objectTypes',
+  'keepAutoIncrement', 'keepDefiner', 'keepCharset', 'noTimestamp', 'noHostFolder', 'autoCommit', 'objectTypes',
   'database', 'databases', 'table', 'tables', 'excludeDatabases', 'excludeTables',
 ]);
 
@@ -261,6 +266,9 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
   const keepDefiner =
     (values['keep-definer'] as boolean | undefined) ??
     file.keepDefiner ?? false;
+  const keepCharset =
+    (values['keep-charset'] as boolean | undefined) ??
+    file.keepCharset ?? false;
   const noTimestamp =
     (values['no-timestamp'] as boolean | undefined) ??
     file.noTimestamp ?? false;
@@ -298,6 +306,7 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
     output: (values.output as string | undefined) ?? file.output ?? './snapshots',
     keepAutoIncrement,
     keepDefiner,
+    keepCharset,
     useTimestamp: !noTimestamp,
     useHostFolder: !noHostFolder,
     autoCommit,
