@@ -17,10 +17,15 @@ Output is one `.sql` file per object, one directory per database. See
 - [src/mysql.ts](src/mysql.ts) — `mysql2/promise` connection; `information_schema`
   enumeration + `showCreate(type, db, name)`.
 - [src/filters.ts](src/filters.ts) — database/table include-exclude, object-type gating.
-- [src/normalize.ts](src/normalize.ts) — strips volatile `AUTO_INCREMENT=N` and
-  the `DEFINER=`user`@`host`` tag (both default-on; `--keep-*` to retain).
+- [src/normalize.ts](src/normalize.ts) — strips volatile `AUTO_INCREMENT=N`, the
+  `DEFINER=`user`@`host`` tag, and table/database `CHARSET`/`COLLATE` (all
+  default-on; `--keep-auto-increment`/`--keep-definer`/`--keep-charset` to retain).
+  Charset stripping targets only the `=`-form table options and the
+  `CREATE DATABASE` charset clause; per-column `CHARACTER SET`/`COLLATE` is left intact.
 - [src/snapshot.ts](src/snapshot.ts) — orchestration: path layout, file writing,
-  `DELIMITER` wrapping, `manifest.json`, and `--no-timestamp` prune logic.
+  `renderFile` (comment header + `USE <db>;` + commented `DROP ... IF EXISTS` +
+  `DELIMITER` wrapping for stored programs), `manifest.json`, and `--no-timestamp`
+  prune logic.
 - [src/prompt.ts](src/prompt.ts) — hidden (non-echoing) password prompt.
 - [src/git.ts](src/git.ts) — `--auto-commit` helpers: detect repo, stage/commit the
   snapshot, best-effort push. Wraps `git` via `child_process.execFile` (no shell, no dep);

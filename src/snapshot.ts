@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Config, ObjectTypeOption } from './cli.js';
 import { makeTableFilter, makeTypeFilter, resolveDatabases } from './filters.js';
 import type { MysqlClient, ObjectType } from './mysql.js';
+import { quoteIdent } from './mysql.js';
 import { normalizeDdl } from './normalize.js';
 
 // Object types whose bodies may contain ';' and therefore need DELIMITER
@@ -98,11 +99,21 @@ export function renderFile(args: RenderArgs): string {
     `-- server: MySQL ${serverVersion}\n` +
     `-- source: mysql-ddl-export\n\n`;
 
+  // Make each file individually replayable: set the schema context so the bare
+  // object name resolves, and offer a commented-out drop to opt into a clean
+  // recreate. `CREATE DATABASE` is itself the schema, so it gets no `USE`.
+  const keyword = type.toUpperCase();
+  const preamble =
+    type === 'database'
+      ? `-- DROP DATABASE IF EXISTS ${quoteIdent(db)};\n\n`
+      : `USE ${quoteIdent(db)};\n\n` +
+        `-- DROP ${keyword} IF EXISTS ${quoteIdent(name)};\n\n`;
+
   const body = STORED_PROGRAMS.has(type)
     ? `DELIMITER $$\n${ddl}$$\nDELIMITER ;\n`
     : `${ddl};\n`;
 
-  return header + body;
+  return header + preamble + body;
 }
 
 function emptyCounts(): Counts {

@@ -108,8 +108,13 @@ snapshots/
       mydb/...
 ```
 
-Stored programs (procedures, functions, triggers, events) are wrapped in
-`DELIMITER $$ … $$` so each file is independently replayable.
+Each file is individually replayable: below the comment header it emits
+`USE \`<db>\`;` to set the schema context, a commented-out
+`-- DROP <TYPE> IF EXISTS \`<name>\`;` to opt into a clean recreate, then the
+`CREATE` statement. (The `database.sql` file gets the commented `DROP DATABASE`
+but no `USE`, since it is the schema being created.) Stored programs
+(procedures, functions, triggers, events) are additionally wrapped in
+`DELIMITER $$ … $$`.
 
 ### `--no-timestamp` (sync mode)
 
