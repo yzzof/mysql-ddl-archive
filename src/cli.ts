@@ -43,6 +43,8 @@ export interface Config {
   objectTypes: ObjectTypeOption[];
   output: string;
   keepAutoIncrement: boolean;
+  /** false => strip DEFINER=user@host from view/routine/trigger/event DDL. */
+  keepDefiner: boolean;
   /** false => write to current/ and prune; true => timestamped dirs. */
   useTimestamp: boolean;
   /** false => omit the <host_port> folder; database dirs sit higher up. */
@@ -87,6 +89,7 @@ Output / behavior:
       --auto-commit        If the output dir is a git repo, git add+commit the snapshot
                            and push it (best-effort; skipped if no remote)
       --keep-auto-increment  Do not strip AUTO_INCREMENT=N from table DDL
+      --keep-definer       Do not strip DEFINER=user@host from view/routine/trigger/event DDL
   -c, --config <path>      Path to a JSON config file (default ./config.json)
       --help               Show this help
 
@@ -112,6 +115,7 @@ const options = {
   'no-host-folder': { type: 'boolean' },
   'auto-commit': { type: 'boolean' },
   'keep-auto-increment': { type: 'boolean' },
+  'keep-definer': { type: 'boolean' },
   config: { type: 'string', short: 'c' },
   help: { type: 'boolean', default: false },
 } as const;
@@ -126,6 +130,7 @@ export interface FileConfig {
   output?: string;
   includeSystem?: boolean;
   keepAutoIncrement?: boolean;
+  keepDefiner?: boolean;
   noTimestamp?: boolean;
   noHostFolder?: boolean;
   autoCommit?: boolean;
@@ -140,7 +145,7 @@ export interface FileConfig {
 
 const KNOWN_FILE_KEYS = new Set<string>([
   'host', 'port', 'user', 'password', 'socket', 'output', 'includeSystem',
-  'keepAutoIncrement', 'noTimestamp', 'noHostFolder', 'autoCommit', 'objectTypes',
+  'keepAutoIncrement', 'keepDefiner', 'noTimestamp', 'noHostFolder', 'autoCommit', 'objectTypes',
   'database', 'databases', 'table', 'tables', 'excludeDatabases', 'excludeTables',
 ]);
 
@@ -253,6 +258,9 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
   const keepAutoIncrement =
     (values['keep-auto-increment'] as boolean | undefined) ??
     file.keepAutoIncrement ?? false;
+  const keepDefiner =
+    (values['keep-definer'] as boolean | undefined) ??
+    file.keepDefiner ?? false;
   const noTimestamp =
     (values['no-timestamp'] as boolean | undefined) ??
     file.noTimestamp ?? false;
@@ -289,6 +297,7 @@ export function parseCli(argv: string[] = process.argv.slice(2)): CliResult {
     objectTypes,
     output: (values.output as string | undefined) ?? file.output ?? './snapshots',
     keepAutoIncrement,
+    keepDefiner,
     useTimestamp: !noTimestamp,
     useHostFolder: !noHostFolder,
     autoCommit,

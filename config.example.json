@@ -5,6 +5,7 @@
   "output": "./snapshots",
   "includeSystem": false,
   "keepAutoIncrement": false,
+  "keepDefiner": false,
   "noTimestamp": false,
   "noHostFolder": false,
   "autoCommit": false,

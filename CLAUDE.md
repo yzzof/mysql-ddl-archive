@@ -17,7 +17,8 @@ Output is one `.sql` file per object, one directory per database. See
 - [src/mysql.ts](src/mysql.ts) — `mysql2/promise` connection; `information_schema`
   enumeration + `showCreate(type, db, name)`.
 - [src/filters.ts](src/filters.ts) — database/table include-exclude, object-type gating.
-- [src/normalize.ts](src/normalize.ts) — strips volatile `AUTO_INCREMENT=N`.
+- [src/normalize.ts](src/normalize.ts) — strips volatile `AUTO_INCREMENT=N` and
+  the `DEFINER=`user`@`host`` tag (both default-on; `--keep-*` to retain).
 - [src/snapshot.ts](src/snapshot.ts) — orchestration: path layout, file writing,
   `DELIMITER` wrapping, `manifest.json`, and `--no-timestamp` prune logic.
 - [src/prompt.ts](src/prompt.ts) — hidden (non-echoing) password prompt.

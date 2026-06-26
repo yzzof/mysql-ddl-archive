@@ -49,6 +49,7 @@ export interface Manifest {
     includeSystem: boolean;
     objectTypes: ObjectTypeOption[];
     keepAutoIncrement: boolean;
+    keepDefiner: boolean;
   };
   databasesSnapshot: string[];
   counts: Counts;
@@ -218,6 +219,7 @@ export async function takeSnapshot(
       includeSystem: config.includeSystem,
       objectTypes: config.objectTypes,
       keepAutoIncrement: config.keepAutoIncrement,
+      keepDefiner: config.keepDefiner,
     },
     databasesSnapshot: databases,
     counts,

@@ -7,8 +7,10 @@ statement for **every** DDL-bearing object, and writes one `.sql` file per
 object into a fresh **timestamped** snapshot directory — one directory per
 database, with object types in subdirectories. Because the output is the
 server's own DDL, every option (engines, charsets/collations, row formats,
-partitioning, foreign keys, CHECK constraints, generated columns, definers,
+partitioning, foreign keys, CHECK constraints, generated columns,
 sql_mode, view algorithms, event schedules, …) is captured automatically.
+By default the environment-specific `DEFINER=user@host` tag is stripped from
+view/routine/trigger/event DDL (see `--keep-definer`).
 
 ## Object types captured
 
@@ -57,8 +59,11 @@ node dist/index.js --exclude-database analytics --exclude-table mydb.audit_log
 # Only certain object types
 node dist/index.js -d mydb --object-types tables,views
 
-# Keep the live AUTO_INCREMENT counter in table DDL (off by default)
+# Keep the live AUTO_INCREMENT counter in table DDL (stripped by default)
 node dist/index.js -d mydb --keep-auto-increment
+
+# Keep the DEFINER=user@host tag on views/routines/triggers/events (stripped by default)
+node dist/index.js -d mydb --keep-definer
 
 # Custom output location
 node dist/index.js -o /backups/ddl
@@ -134,6 +139,7 @@ touching sibling folders. The list of removed paths is recorded in
 | `--no-host-folder` | | off | Omit the `<host_port>` folder level (see layout above) |
 | `--auto-commit` | | off | If the output dir is a git repo, commit + push the snapshot |
 | `--keep-auto-increment` | | off | Keep `AUTO_INCREMENT=N` in table DDL |
+| `--keep-definer` | | off | Keep `DEFINER=user@host` on views/routines/triggers/events |
 | `-c, --config` | | `./config.json` | Path to a JSON config file |
 | `--help` | | | Show help |
 
@@ -166,9 +172,10 @@ are warned about and ignored.
 ## History
 
 By default each run writes a brand-new timestamped directory under the per-host
-folder, so previous snapshots are preserved. `AUTO_INCREMENT` counters are
-stripped by default, so committing the `snapshots/` tree to git (or diffing two
-timestamped dirs) shows only real structural changes between snapshots.
+folder, so previous snapshots are preserved. `AUTO_INCREMENT` counters and
+`DEFINER=user@host` tags are stripped by default, so committing the `snapshots/`
+tree to git (or diffing two timestamped dirs) shows only real structural changes
+between snapshots.
 ```
 diff -ru snapshots/127.0.0.1_3306/2026-06-22T*/mydb \
          snapshots/127.0.0.1_3306/2026-06-23T*/mydb
